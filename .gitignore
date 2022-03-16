@@ -1,0 +1,6 @@
+Pipfile*
+__pycache__
+.env
+db_variables.py
+notes.txt
+venv
