@@ -15,11 +15,19 @@ super_admin_role = 'Owner'
 upper_admin_role = 'Managers'
 base_admin_role = 'Staff'
 
-bot = commands.Bot(command_prefix='!')
+intents = discord.Intents.default()
+intents.members = True
+bot = commands.Bot(command_prefix='!', intents=intents)
 
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
+    g = bot.guilds[0]
+    print(g.name)
+    async for m in g.fetch_members():
+        print(f'{m} {m.id} {m.roles}')
+
+
 
 
 @bot.command(name='test', help='A test command')
