@@ -1,1 +1,13 @@
-Testing pull request
+Run after server reboot:
+
+~/cloud_sql_proxy -instances=kabs-bot:europe-west1:db-dnkabs=tcp:5432 -credential_file=$GOOGLE_APPLICATION_CREDENTIALS &
+
+pm2 start "cd ~/github/Discord-KabsBot && pipenv run python bot.py"
+
+--
+
+Run to connect to database:
+
+gcloud config set project kabs-bot
+gcloud sql connect db-dnkabs
+\connect discord_bot;
