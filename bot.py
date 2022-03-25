@@ -1,12 +1,21 @@
 # https://realpython.com/how-to-make-a-discord-bot-python/
 import os
-import random
+
+import collections
+import datetime
+from io import BytesIO
+import itertools
+from PIL import Image
 import psycopg2
+import requests
 import signal
+import textwrap
 
 import discord
 from dotenv import load_dotenv
 from discord.ext import commands
+
+print(str(datetime.datetime.now()) + '\n')
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -29,6 +38,9 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 ##### Database handling #####
 
+db = None
+cur = None
+
 try:
     db = psycopg2.connect(
             database= os.getenv('DB_NAME'),
@@ -39,12 +51,10 @@ try:
         )
     cur = db.cursor()
 except Exception as e:
-    print("Could not connect to database!")
     print(e)
-    db = None
-    cur = None
+    print("\nCould not connect to database!\n")
 else:
-    print(f"Connected to {os.environ['DB_NAME']} database.")
+    print(f"Connected to {os.environ['DB_NAME']} database.\n")
 finally:
     pass
 
@@ -79,12 +89,30 @@ def check_admin(ctx):
 
     return ret
 
+def drink_common_colour(url):
+    hex_colour = ''
+
+    res = requests.get(url)
+    img = Image.open(BytesIO(res.content))
+    img.convert('RGB')
+
+    pixel_list = []
+    for x in itertools.product(range(19, 98), range(34, 61)):
+        pixel_list.append(img.getpixel(x))
+
+    colour_count = collections.Counter(pixel_list)
+    high_colour = colour_count.most_common(1)[0][0]
+
+    ret_colour = discord.Colour.from_rgb(high_colour[0], high_colour[1], high_colour[2])
+
+    return ret_colour
+
 
 ##### Events #####
 
 @bot.event
 async def on_ready():
-    print(f'{bot.user.name} has connected to Discord!')
+    print(f'{bot.user.name} has connected to Discord!\n')
     g = bot.guilds[0]
     print(g.name)
     async for m in g.fetch_members():
@@ -144,8 +172,8 @@ async def order_drink(ctx, drink_choice):
     if drink_len == 1:
         e = discord.Embed(
                 title = drink_rec[0][1],
-                description = "Drink it while it's warm!",
-                color = 0xffff00
+                description = textwrap.fill(drink_rec[0][4], 23),
+                color = drink_common_colour(drink_rec[0][2])
                 )
         e.set_image(url = drink_rec[0][2])
         response = f"Here is your drink:"
@@ -158,26 +186,6 @@ async def order_drink(ctx, drink_choice):
         response = "That drink is unavailable"
 
     await ctx.send(response, embed=e)
-
-
-@bot.command(name='roll_dice', help='Simulates rolling dice.')
-async def roll(ctx, number_of_dice: int, number_of_sides: int):
-    dice = [
-        str(random.choice(range(1, number_of_sides + 1)))
-        for _ in range(number_of_dice)
-    ]
-    await ctx.send(', '.join(dice))
-
-
-@bot.command(name='create-channel')
-@commands.check(check_upper_admin)
-async def create_channel(ctx, channel_name='real-python'):
-    guild = ctx.guild
-    existing_channel = discord.utils.get(guild.channels, name=channel_name)
-    if not existing_channel:
-        print(f'Creating a new channel: {channel_name}')
-        await guild.create_text_channel(channel_name)
-
 
 
 bot.run(TOKEN)
