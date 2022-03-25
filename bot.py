@@ -13,7 +13,7 @@ import textwrap
 
 import discord
 from dotenv import load_dotenv
-from discord.ext import commands
+from discord.ext import tasks, commands
 
 print(str(datetime.datetime.now()) + '\n')
 
@@ -71,20 +71,20 @@ signal.signal(signal.SIGINT, keyboardInterruptHandler)
 
 ##### Functions #####
 
-def check_upper_admin(ctx):
-    ret = False
-    user_roles = {str(role) for role in ctx.message.author.roles}
-
-    if user_roles.intersection(upper_admins):
-        ret = True
-
-    return ret
-
 def check_admin(ctx):
     ret = False
     user_roles = {str(role) for role in ctx.message.author.roles}
 
     if user_roles.intersection(all_admins):
+        ret = True
+
+    return ret
+
+def check_upper_admin(ctx):
+    ret = False
+    user_roles = {str(role) for role in ctx.message.author.roles}
+
+    if user_roles.intersection(upper_admins):
         ret = True
 
     return ret
@@ -106,6 +106,28 @@ def drink_common_colour(url):
     ret_colour = discord.Colour.from_rgb(high_colour[0], high_colour[1], high_colour[2])
 
     return ret_colour
+
+# https://stackoverflow.com/questions/64167141/how-do-i-schedule-a-function-to-run-everyday-at-a-specific-time-in-discord-py
+def seconds_until(hours, minutes):
+    given_time = datetime.time(hours, minutes)
+    now = datetime.datetime.now()
+    future_exec = datetime.datetime.combine(now, given_time)
+    if (future_exec - now).days < 0:
+        future_exec = datetime.datetime.combine(now + datetime.timedelta(days=1), given_time)
+
+    return (future_exec - now).total_seconds()
+
+
+##### Tasks #####
+
+@tasks.loop(hours=24)
+async def my_job_forever(self):
+    while True:
+        await asyncio.sleep(seconds_until(0, 0))
+        print("See you in 24 hours from exactly now")
+        log_channel = bot.get_channel(channel_id['log'])
+        await log_channel.send('Test: it should be 00:00 now')
+        await asyncio.sleep(60)
 
 
 ##### Events #####
@@ -129,7 +151,6 @@ async def on_member_join(member):
         
         cur.execute(sql)
         db.commit()
-
 
 @bot.event
 async def on_command_error(ctx, error):
