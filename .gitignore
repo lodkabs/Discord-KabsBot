@@ -4,3 +4,5 @@ __pycache__
 db_variables.py
 notes.txt
 venv
+key.json
+cloud_sql_proxy*
