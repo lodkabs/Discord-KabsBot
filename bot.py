@@ -93,6 +93,7 @@ def logging_in_channel(ctx, e, usage="Unexpected error"):
     logging = f"Error detected at {str(datetime.datetime.now())}:"
     logging += f"\n\tUser: {ctx.author.name}"
     logging += f"\n\tChannel: {ctx.channel.name}"
+    logging += f"\n\tMessage: `{ctx.message.content}`"
 
     logging += f"\n\n\tUsage: {usage}"
     logging += f"\n\tReason: {e}"
@@ -157,7 +158,11 @@ async def order_drink(ctx, *args):
         except ValueError:
             for count, coffee in enumerate(coffee_list):
                 similarity_ratio = SM(isjunk=None, a=drink_choice, b=coffee["drink"]).ratio()
-                if similarity_ratio >= 0.5:
+                if similarity_ratio == 1:
+                    del drink_rec
+                    drink_rec = [(count, coffee)]
+                    break
+                elif similarity_ratio >= 0.5:
                     drink_rec.append((count, coffee))
         except Exception as e:
             await log_channel.send(logging_in_channel(ctx, e, "Drink choice validation"))
