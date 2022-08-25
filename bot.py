@@ -20,7 +20,6 @@ print(str(datetime.datetime.now()) + '\n')
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
-GUILD = os.getenv('DISCORD_GUILD')
 channel_id = {}
 for c in ['log', 'test', 'drink']:
     channel_id[c] = int(os.getenv(c.upper() + '_CHANNEL_ID'))
@@ -32,12 +31,13 @@ base_admin_role = 'Staff'
 upper_admins = {upper_admin_role, super_admin_role}
 all_admins = {base_admin_role, upper_admin_role, super_admin_role}
 
-intents = discord.Intents.default()
+intents = discord.Intents.all()
 intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 log_channel = bot.get_channel(channel_id['log'])
 
+daily_users = {}
 
 ##### Functions #####
 
@@ -149,7 +149,9 @@ async def order_drink(ctx, *args):
     response = ""
     em = None
 
-    if args:
+    if ctx.message.author.id in daily_users:
+        pass
+    elif args:
         drink_choice = " ".join(args)
         drink_rec = []
 
