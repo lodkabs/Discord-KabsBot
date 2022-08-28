@@ -1,6 +1,5 @@
 # https://realpython.com/how-to-make-a-discord-bot-python/
 import os
-from keep_alive import keep_alive
 
 import collections
 import datetime
@@ -171,7 +170,7 @@ async def order_drink(ctx, *args):
                         del drink_rec
                         drink_rec = [(count, coffee)]
                         break
-                    elif similarity_ratio >= 0.5:
+                    elif similarity_ratio >= 0.6:
                         drink_rec.append((count, coffee))
                     elif "alias" in coffee:
                         for alias in coffee["alias"]:
@@ -228,6 +227,5 @@ async def order_drink(ctx, *args):
 
         await ctx.send(response, embed=em)
 
-keep_alive()
 TOKEN = os.getenv("DISCORD_TOKEN")
 bot.run(TOKEN)
