@@ -1,5 +1,6 @@
 # https://realpython.com/how-to-make-a-discord-bot-python/
 import os
+from keep_alive import keep_alive
 
 import collections
 import datetime
@@ -19,7 +20,6 @@ from coffee_list import coffee_list
 print(str(datetime.datetime.now()) + "\n")
 
 load_dotenv()
-TOKEN = os.getenv("DISCORD_TOKEN")
 
 super_admin_role = "Owner"
 upper_admin_role = "Managers"
@@ -228,5 +228,6 @@ async def order_drink(ctx, *args):
 
         await ctx.send(response, embed=em)
 
-
+keep_alive()
+TOKEN = os.getenv("DISCORD_TOKEN")
 bot.run(TOKEN)
