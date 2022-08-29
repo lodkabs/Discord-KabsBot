@@ -37,6 +37,7 @@ channels = {}
 channel_names = {}
 for c in ["log", "test", "drink"]:
     channel_ids[c] = int(os.getenv(c.upper() + "_CHANNEL_ID"))
+customers_role_id = int(os.getenv("CUSTOMERS_ROLE_ID"))
 
 daily_users = {}
 test_users = {}
@@ -117,6 +118,11 @@ async def on_command_error(ctx, error):
         await channels["log"].send(logging_in_channel(ctx, str(error)))
 
     print(error)
+
+@bot.event
+async def on_member_join(member):
+    role = discord.utils.get(member.server.roles, id="CUSTOMERS_ROLE_ID")
+    await bot.add_roles(member, role)
 
 
 ##### Commands #####
