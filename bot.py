@@ -121,8 +121,8 @@ async def on_command_error(ctx, error):
 
 @bot.event
 async def on_member_join(member):
-    role = discord.utils.get(member.server.roles, id="CUSTOMERS_ROLE_ID")
-    await bot.add_roles(member, role)
+    customers_role = discord.utils.get(member.guild.roles, id=customers_role_id)
+    await member.add_roles(customers_role)
 
 
 ##### Commands #####
@@ -171,7 +171,7 @@ async def order_drink(ctx, *args):
                 d_c = int(drink_choice)
             except ValueError:
                 for count, coffee in enumerate(coffee_list):
-                    similarity_ratio = SM(isjunk=None, a=drink_choice, b=coffee["drink"]).ratio()
+                    similarity_ratio = SM(isjunk=None, a=drink_choice.lower(), b=coffee["drink"].lower()).ratio()
                     if similarity_ratio == 1:
                         del drink_rec
                         drink_rec = [(count, coffee)]
@@ -180,7 +180,7 @@ async def order_drink(ctx, *args):
                         drink_rec.append((count, coffee))
                     elif "alias" in coffee:
                         for alias in coffee["alias"]:
-                            alias_ratio = SM(isjunk=None, a=drink_choice, b=alias).ratio()
+                            alias_ratio = SM(isjunk=None, a=drink_choice.lower(), b=alias.lower()).ratio()
                             if alias_ratio >= 0.8:
                                 drink_rec.append((count, coffee))
                                 break
