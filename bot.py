@@ -29,6 +29,7 @@ all_admins = {base_admin_role, upper_admin_role, super_admin_role}
 
 intents = discord.Intents.all()
 intents.members = True
+intents.reactions = True
 help_command = commands.DefaultHelpCommand(no_category = 'Commands')
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=help_command)
 
@@ -37,7 +38,13 @@ channels = {}
 channel_names = {}
 for c in ["log", "test", "drink"]:
     channel_ids[c] = int(os.getenv(c.upper() + "_CHANNEL_ID"))
+
 customers_role_id = int(os.getenv("CUSTOMERS_ROLE_ID"))
+go_live_role_id = int(os.getenv("GO_LIVE_ROLE_ID"))
+events_role_id = int(os.getenv("EVENTS_ROLE_ID"))
+announce_role_id = int(os.getenv("ANNOUNCE_ROLE_ID"))
+
+notif_role_vote_id = int(os.getenv("NOTIF_ROLE_VOTE_ID"))
 
 daily_users = {}
 test_users = {}
@@ -124,6 +131,29 @@ async def on_member_join(member):
     customers_role = discord.utils.get(member.guild.roles, id=customers_role_id)
     await member.add_roles(customers_role)
 
+@bot.event
+async def on_raw_reaction_add(payload):
+    if payload.message_id == notif_role_vote_id:
+        emoji_name = str(payload.emoji)
+        if emoji_name == "🎬":
+            await payload.member.add_roles(discord.utils.get(payload.member.guild.roles, id=go_live_role_id))
+        elif emoji_name == "🎏":
+            await payload.member.add_roles(discord.utils.get(payload.member.guild.roles, id=events_role_id))
+        elif emoji_name == "📣":
+            await payload.member.add_roles(discord.utils.get(payload.member.guild.roles, id=announce_role_id))
+
+@bot.event
+async def on_raw_reaction_remove(payload):
+    if payload.message_id == notif_role_vote_id:
+        current_guild = bot.get_guild(payload.guild_id)
+        current_member = current_guild.get_member(payload.user_id)
+        emoji_name = payload.emoji.name
+        if emoji_name == "🎬":
+            await current_member.remove_roles(discord.utils.get(current_guild.roles, id=go_live_role_id))
+        elif emoji_name == "🎏":
+            await current_member.remove_roles(discord.utils.get(current_guild.roles, id=events_role_id))
+        elif emoji_name == "📣":
+            await current_member.remove_roles(discord.utils.get(current_guild.roles, id=announce_role_id))
 
 ##### Commands #####
 
