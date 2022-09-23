@@ -40,9 +40,10 @@ for c in ["log", "test", "drink"]:
     channel_ids[c] = int(os.getenv(c.upper() + "_CHANNEL_ID"))
 
 customers_role_id = int(os.getenv("CUSTOMERS_ROLE_ID"))
-go_live_role_id = int(os.getenv("GO_LIVE_ROLE_ID"))
+kabs_go_live_id = int(os.getenv("KABS_GO_LIVE_ID"))
 events_role_id = int(os.getenv("EVENTS_ROLE_ID"))
 announce_role_id = int(os.getenv("ANNOUNCE_ROLE_ID"))
+doopu_go_live_id = int(os.getenv("DOOPU_GO_LIVE_ID"))
 
 notif_role_vote_id = int(os.getenv("NOTIF_ROLE_VOTE_ID"))
 
@@ -136,11 +137,13 @@ async def on_raw_reaction_add(payload):
     if payload.message_id == notif_role_vote_id:
         emoji_name = str(payload.emoji)
         if emoji_name == "🎬":
-            await payload.member.add_roles(discord.utils.get(payload.member.guild.roles, id=go_live_role_id))
+            await payload.member.add_roles(discord.utils.get(payload.member.guild.roles, id=kabs_go_live_id))
         elif emoji_name == "🎏":
             await payload.member.add_roles(discord.utils.get(payload.member.guild.roles, id=events_role_id))
         elif emoji_name == "📣":
             await payload.member.add_roles(discord.utils.get(payload.member.guild.roles, id=announce_role_id))
+        elif emoji_name == "☕":
+            await payload.member.add_roles(discord.utils.get(payload.member.guild.roles, id=doopu_go_live_id))
 
 @bot.event
 async def on_raw_reaction_remove(payload):
@@ -149,11 +152,13 @@ async def on_raw_reaction_remove(payload):
         current_member = current_guild.get_member(payload.user_id)
         emoji_name = payload.emoji.name
         if emoji_name == "🎬":
-            await current_member.remove_roles(discord.utils.get(current_guild.roles, id=go_live_role_id))
+            await current_member.remove_roles(discord.utils.get(current_guild.roles, id=kabs_go_live_id))
         elif emoji_name == "🎏":
             await current_member.remove_roles(discord.utils.get(current_guild.roles, id=events_role_id))
         elif emoji_name == "📣":
             await current_member.remove_roles(discord.utils.get(current_guild.roles, id=announce_role_id))
+        elif emoji_name == "☕":
+            await current_member.remove_roles(discord.utils.get(current_guild.roles, id=doopu_go_live_id))
 
 ##### Commands #####
 
