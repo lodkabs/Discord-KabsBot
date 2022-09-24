@@ -2,21 +2,23 @@
 import os
 
 import collections
-import datetime
+from datetime import datetime
 from difflib import SequenceMatcher as SM
 from io import BytesIO
 import itertools
 from PIL import Image
 import requests
 import textwrap
+import time
 
 import discord
 from dotenv import load_dotenv
 from discord.ext import tasks, commands
+from twitchAPI.twitch import Twitch
 
 from coffee_list import coffee_list
 
-print(str(datetime.datetime.now()) + "\n")
+print(str(datetime.now()) + "\n")
 
 load_dotenv()
 
@@ -30,13 +32,14 @@ all_admins = {base_admin_role, upper_admin_role, super_admin_role}
 intents = discord.Intents.all()
 intents.members = True
 intents.reactions = True
+intents.messages = True
 help_command = commands.DefaultHelpCommand(no_category = 'Commands')
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=help_command)
 
 channel_ids = {}
 channels = {}
 channel_names = {}
-for c in ["log", "test", "drink"]:
+for c in ["log", "test", "drink", "clip"]:
     channel_ids[c] = int(os.getenv(c.upper() + "_CHANNEL_ID"))
 
 customers_role_id = int(os.getenv("CUSTOMERS_ROLE_ID"))
@@ -50,6 +53,8 @@ notif_role_vote_id = int(os.getenv("NOTIF_ROLE_VOTE_ID"))
 daily_users = {}
 test_users = {}
 test_delay = 7
+
+twitch = Twitch(os.environ['CLIENT_ID'], os.environ['CLIENT_SECRET'])
 
 ##### Functions #####
 
@@ -89,10 +94,38 @@ def drink_common_colour(url):
     ret_colour = discord.Colour.from_rgb(high_colour[0], high_colour[1], high_colour[2])
     return ret_colour
 
+def contains_twitch_clip(text):
+    return ("https://clips.twitch.tv/" in text or ("https://www.twitch.tv/" and "/clip/" in text))
+
+def clip_url_info(url):
+    ret = ""
+    pathinfo = ""
+    comps = url.split("/")
+
+    if comps[2] == "clips.twitch.tv" or (comps[2] == "www.twitch.tv" and comps[4] == "clip"):
+        pathinfo = comps[-1]
+
+    if pathinfo:
+        clip_filters = pathinfo.split("?")
+        id_comp = clip_filters[0]
+
+        clip_dict = twitch.get_clips(clip_id=id_comp)
+        clip_info = clip_dict["data"][0]
+        clip_datetime = datetime.strptime(clip_info["created_at"], '%Y-%m-%dT%H:%M:%SZ')
+
+        ret += f"Clip title: {clip_info['title']}"
+        ret += f"\nClip link: <{clip_info['url']}>"
+        ret += f"\nCreated on: <t:{int(time.mktime(clip_datetime.timetuple()))}>"
+        ret += f"\nCreated by: {clip_info['creator_name']}"
+        ret += f"\n\nStreamer: {clip_info['broadcaster_name']}"
+        ret += f"\nTwitch: <https://www.twitch.tv/{clip_info['broadcaster_name']}>"
+
+    return ret
+
 def logging_in_channel(ctx, e, usage="Unexpected error"):
     logging = "\n~~" + " " * 45 + "~~"
 
-    logging += f"\nError detected at {str(datetime.datetime.now())}:"
+    logging += f"\nError detected at {str(datetime.now())}:"
     logging += f"\n\tUser: {ctx.author.name}"
     logging += f"\n\tChannel: {ctx.channel.name}"
     logging += f"\n\tMessage: `{ctx.message.content}`"
@@ -112,7 +145,7 @@ async def on_ready():
     print(f"{bot.user.name} has connected to Discord!\n")
 
     await bot.wait_until_ready()
-    for c in ["log", "test", "drink"]:
+    for c in ["log", "test", "drink", "clip"]:
         channels[c] = bot.get_channel(channel_ids[c])
         channel_names[c] = channels[c].name
 
@@ -160,6 +193,42 @@ async def on_raw_reaction_remove(payload):
         elif emoji_name == "☕":
             await current_member.remove_roles(discord.utils.get(current_guild.roles, id=doopu_go_live_id))
 
+@bot.event
+async def on_message(message):
+    if message.author.id != bot.user.id:
+        ctx = await bot.get_context(message)
+        if message.channel.id in [channel_ids["clip"], channel_ids["test"]]:
+            ret = ""
+            for word in message.content.split():
+                if contains_twitch_clip(word):
+                    try:
+                        info = clip_url_info(word.strip("<>"))
+                    except Exception as e:
+                        await channels["log"].send(logging_in_channel(ctx, e, "Clip information retrieval"))
+                        continue
+                    finally:
+                        pass
+
+                    if info:
+                        if ret:
+                            ret += "\n~~" + " " * 45 + "~~\n"
+                        ret += info
+
+            if ret:
+                await message.reply(ret)
+
+@bot.event
+async def on_message_delete(message):
+    if message.channel.id in [channel_ids["clip"], channel_ids["test"]] and contains_twitch_clip(message.content):
+        msgs = await message.channel.history(limit=100).flatten()
+
+        for msg in msgs:
+            if msg.author.id == bot.user.id and msg.reference.message_id == message.id:
+                new_content = "**Original post removed, links may not be server appropriate, please proceed with caution.**\n\n"
+                orig_content = msg.content
+                await msg.edit(content=new_content + orig_content)
+                break
+
 ##### Commands #####
 
 @bot.command(name="test", help="A test command", hidden=True)
@@ -188,12 +257,12 @@ async def order_drink(ctx, *args):
         pass
     elif (ctx.channel.id == channel_ids["drink"] and
           user_id in daily_users and
-          (datetime.datetime.now() - daily_users[user_id][0]).total_seconds() < 3600):
+          (datetime.now() - daily_users[user_id][0]).total_seconds() < 3600):
         if daily_users[user_id][1]:
             daily_users[user_id][1] = False
             await ctx.send(f"Drinks are free at the moment, please come back later for another drink, I hope you're enjoying your {daily_users[user_id][2]} in the meantime :)")
     elif (is_test and user_id in test_users and
-          (datetime.datetime.now() - test_users[user_id][0]).total_seconds() < test_delay):
+          (datetime.now() - test_users[user_id][0]).total_seconds() < test_delay):
         if test_users[user_id][1]:
             test_users[user_id][1] = False
             await ctx.send(f"Test delay of {test_delay} seconds, current drink: {test_users[user_id][2]}")
@@ -251,9 +320,9 @@ async def order_drink(ctx, *args):
                     em.set_image(url = drink_rec[0][1]["pic"])
                     response = f"Here is your drink:"
                     if is_test:
-                        test_users[ctx.message.author.id] = [datetime.datetime.now(), True, drink_rec[0][1]["drink"]]
+                        test_users[ctx.message.author.id] = [datetime.now(), True, drink_rec[0][1]["drink"]]
                     else:
-                        daily_users[ctx.message.author.id] = [datetime.datetime.now(), True, drink_rec[0][1]["drink"]]
+                        daily_users[ctx.message.author.id] = [datetime.now(), True, drink_rec[0][1]["drink"]]
                 elif drink_len > 1:
                     response = "My apologies, is the order one of the following?"
                     for d in drink_rec:
