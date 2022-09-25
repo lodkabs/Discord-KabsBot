@@ -39,7 +39,7 @@ bot = commands.Bot(command_prefix="!", intents=intents, help_command=help_comman
 channel_ids = {}
 channels = {}
 channel_names = {}
-for c in ["log", "delete", "test", "drink", "clip"]:
+for c in ["log", "delete", "test", "drink", "clip", "manager"]:
     channel_ids[c] = int(os.getenv(c.upper() + "_CHANNEL_ID"))
 
 customers_role_id = int(os.getenv("CUSTOMERS_ROLE_ID"))
@@ -145,7 +145,7 @@ async def on_ready():
     print(f"{bot.user.name} has connected to Discord!\n")
 
     await bot.wait_until_ready()
-    for c in ["log", "delete", "test", "drink", "clip"]:
+    for c in ["log", "delete", "test", "drink", "clip", "manager"]:
         channels[c] = bot.get_channel(channel_ids[c])
         channel_names[c] = channels[c].name
 
@@ -229,8 +229,9 @@ async def on_message_delete(message):
                 await msg.edit(content=new_content + orig_content)
                 break
 
-    ctx = await bot.get_context(message)
-    await channels["delete"].send(logging_in_channel(ctx, "_Reply to this message with reason, if necessary_", "Message deletion", "Deletion"))
+    if message.channel.id not in [channel_ids["delete"], channel_ids["manager"]]:
+        ctx = await bot.get_context(message)
+        await channels["delete"].send(logging_in_channel(ctx, "_Reply to this message with reason, if necessary_", "Message deletion", "Deletion"))
 
 ##### Commands #####
 
