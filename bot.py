@@ -39,7 +39,7 @@ bot = commands.Bot(command_prefix="!", intents=intents, help_command=help_comman
 channel_ids = {}
 channels = {}
 channel_names = {}
-for c in ["log", "test", "drink", "clip"]:
+for c in ["log", "delete", "test", "drink", "clip"]:
     channel_ids[c] = int(os.getenv(c.upper() + "_CHANNEL_ID"))
 
 customers_role_id = int(os.getenv("CUSTOMERS_ROLE_ID"))
@@ -122,10 +122,10 @@ def clip_url_info(url):
 
     return ret
 
-def logging_in_channel(ctx, e, usage="Unexpected error"):
+def logging_in_channel(ctx, e, usage="Unexpected error", log_type="Error"):
     logging = "\n~~" + " " * 45 + "~~"
 
-    logging += f"\nError detected at {str(datetime.now())}:"
+    logging += f"\n{log_type} detected at <t:{int(time.time())}>:"
     logging += f"\n\tUser: {ctx.author.name}"
     logging += f"\n\tChannel: {ctx.channel.name}"
     logging += f"\n\tMessage: `{ctx.message.content}`"
@@ -145,7 +145,7 @@ async def on_ready():
     print(f"{bot.user.name} has connected to Discord!\n")
 
     await bot.wait_until_ready()
-    for c in ["log", "test", "drink", "clip"]:
+    for c in ["log", "delete", "test", "drink", "clip"]:
         channels[c] = bot.get_channel(channel_ids[c])
         channel_names[c] = channels[c].name
 
@@ -228,6 +228,9 @@ async def on_message_delete(message):
                 orig_content = msg.content
                 await msg.edit(content=new_content + orig_content)
                 break
+
+    ctx = await bot.get_context(message)
+    await channels["delete"].send(logging_in_channel(ctx, "_Reply to this message with reason, if necessary_", "Message deletion", "Deletion"))
 
 ##### Commands #####
 
