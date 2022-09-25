@@ -217,11 +217,11 @@ async def on_message(message):
             if ret:
                 await message.reply(ret)
 
+    await bot.process_commands(message)
+
 @bot.event
 async def on_message_delete(message):
     if message.channel.id in [channel_ids["clip"], channel_ids["test"]] and contains_twitch_clip(message.content):
-        #msgs = await message.channel.history(limit=100)
-
         async for msg in message.channel.history():
             if msg.author.id == bot.user.id and msg.reference.message_id == message.id:
                 new_content = "**Original post removed, links may not be server appropriate, please proceed with caution.**\n\n"
