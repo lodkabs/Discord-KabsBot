@@ -39,7 +39,7 @@ bot = commands.Bot(command_prefix="!", intents=intents, help_command=help_comman
 channel_ids = {}
 channels = {}
 channel_names = {}
-for c in ["log", "delete", "test", "drink", "clip", "manager"]:
+for c in ["log", "delete", "test", "drink", "clip", "doopu_clip", "manager"]:
     channel_ids[c] = int(os.getenv(c.upper() + "_CHANNEL_ID"))
 
 customers_role_id = int(os.getenv("CUSTOMERS_ROLE_ID"))
@@ -197,7 +197,7 @@ async def on_raw_reaction_remove(payload):
 async def on_message(message):
     if message.author.id != bot.user.id:
         ctx = await bot.get_context(message)
-        if message.channel.id in [channel_ids["clip"], channel_ids["test"]]:
+        if message.channel.id in [channel_ids["clip"], channel_ids["doopu_clip"], channel_ids["test"]]:
             ret = ""
             for word in message.content.split():
                 if contains_twitch_clip(word):
@@ -221,7 +221,7 @@ async def on_message(message):
 
 @bot.event
 async def on_message_delete(message):
-    if message.channel.id in [channel_ids["clip"], channel_ids["test"]] and contains_twitch_clip(message.content):
+    if message.channel.id in [channel_ids["clip"], channel_ids["doopu_clip"], channel_ids["test"]] and contains_twitch_clip(message.content):
         async for msg in message.channel.history():
             if msg.author.id == bot.user.id and msg.reference.message_id == message.id:
                 new_content = "**Original post removed, links may not be server appropriate, please proceed with caution.**\n\n"
