@@ -16,6 +16,9 @@ from dotenv import load_dotenv
 from discord.ext import tasks, commands
 from twitchAPI.twitch import Twitch
 
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
+
 from coffee_list import coffee_list
 
 print(str(datetime.now()) + "\n")
@@ -39,7 +42,7 @@ bot = commands.Bot(command_prefix="!", intents=intents, help_command=help_comman
 channel_ids = {}
 channels = {}
 channel_names = {}
-for c in ["log", "delete", "test", "drink", "clip", "doopu_clip", "manager"]:
+for c in ["log", "delete", "test", "drink", "clip", "doopu_clip", "manager", "podcast"]:
     channel_ids[c] = int(os.getenv(c.upper() + "_CHANNEL_ID"))
 
 customers_role_id = int(os.getenv("CUSTOMERS_ROLE_ID"))
@@ -47,6 +50,7 @@ kabs_go_live_id = int(os.getenv("KABS_GO_LIVE_ID"))
 events_role_id = int(os.getenv("EVENTS_ROLE_ID"))
 announce_role_id = int(os.getenv("ANNOUNCE_ROLE_ID"))
 doopu_go_live_id = int(os.getenv("DOOPU_GO_LIVE_ID"))
+ir_role_id = int(os.getenv("IR_ROLE_ID"))
 
 notif_role_vote_id = int(os.getenv("NOTIF_ROLE_VOTE_ID"))
 
@@ -55,6 +59,12 @@ test_users = {}
 test_delay = 7
 
 twitch = Twitch(os.environ['CLIENT_ID'], os.environ['CLIENT_SECRET'])
+
+sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=os.getenv("SP_CLIENT_ID"),
+                                               client_secret=os.getenv("SP_CLIENT_SECRET"),
+                                               redirect_uri=os.getenv("SP_REDIRECT_URI"),
+                                               scope="user-library-read"))
+show_id = os.getenv("IR_SHOW_ID")
 
 ##### Functions #####
 
@@ -137,6 +147,35 @@ def logging_in_channel(ctx, e, usage="Unexpected error", log_type="Error"):
 
 ##### Tasks #####
 
+@tasks.loop(hours=1)
+async def podcast_scan():
+    ir_res = dict()
+    ir_last_ep_file = "ir_last_episode.txt"
+
+    try:
+        ir_res = sp.show_episodes(show_id, limit=1)
+    except Exception as e:
+        await channels["log"].send(logging_in_channel(ctx, e, "Spotify API"))
+    else:
+        podcast_name = ir_res["items"][0]["name"]
+        new_ep = False
+        try:
+            f = open(ir_last_ep_file, "r")
+        except IOError:
+            new_ep = True
+        else:
+            prev_ep = f.read()
+            if podcast_name != prev_ep.strip():
+                new_ep = True
+            f.close()
+
+        if new_ep:
+            with open(ir_last_ep_file, "w") as f:
+                f.write(podcast_name)
+            await channels["podcast"].send(f"A new episode of <@&{str(ir_role_id)}> is available: **{podcast_name}**\n{ir_res['items'][0]['external_urls']['spotify']}")
+    finally:
+        del ir_res
+
 
 ##### Events #####
 
@@ -145,9 +184,11 @@ async def on_ready():
     print(f"{bot.user.name} has connected to Discord!\n")
 
     await bot.wait_until_ready()
-    for c in ["log", "delete", "test", "drink", "clip", "manager"]:
+    for c in ["log", "delete", "test", "drink", "clip", "manager", "podcast"]:
         channels[c] = bot.get_channel(channel_ids[c])
         channel_names[c] = channels[c].name
+
+    podcast_scan.start()
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -177,6 +218,8 @@ async def on_raw_reaction_add(payload):
             await payload.member.add_roles(discord.utils.get(payload.member.guild.roles, id=announce_role_id))
         elif emoji_name == "☕":
             await payload.member.add_roles(discord.utils.get(payload.member.guild.roles, id=doopu_go_live_id))
+        elif emoji_name == "📻":
+            await payload.member.add_roles(discord.utils.get(payload.member.guild.roles, id=ir_role_id))
 
 @bot.event
 async def on_raw_reaction_remove(payload):
@@ -192,6 +235,8 @@ async def on_raw_reaction_remove(payload):
             await current_member.remove_roles(discord.utils.get(current_guild.roles, id=announce_role_id))
         elif emoji_name == "☕":
             await current_member.remove_roles(discord.utils.get(current_guild.roles, id=doopu_go_live_id))
+        elif emoji_name == "📻":
+            await current_member.remove_roles(discord.utils.get(current_guild.roles, id=ir_role_id))
 
 @bot.event
 async def on_message(message):

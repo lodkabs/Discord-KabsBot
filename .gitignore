@@ -1,8 +1,10 @@
 Pipfile*
 __pycache__
 .env
+.cache
 db_variables.py
 notes.txt
 venv
 key.json
 cloud_sql_proxy*
+ir_last_episode.txt
