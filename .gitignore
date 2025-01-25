@@ -6,5 +6,6 @@ db_variables.py
 notes.txt
 venv
 key.json
-cloud_sql_proxy*
 ir_last_episode.txt
+nohup.out
+run_commands.txt

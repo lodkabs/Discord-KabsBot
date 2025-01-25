@@ -188,7 +188,8 @@ async def on_ready():
         channels[c] = bot.get_channel(channel_ids[c])
         channel_names[c] = channels[c].name
 
-    podcast_scan.start()
+    if not podcast_scan.is_running():
+        podcast_scan.start()
 
 @bot.event
 async def on_command_error(ctx, error):
